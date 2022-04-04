@@ -58,7 +58,7 @@ export default {
     },
   },
   created() {
-    axios.post("//127.0.0.1:8080/", {
+    axios.get("//127.0.0.1:8080/", {
       id: "LyFive",
     })
       .then(res => {

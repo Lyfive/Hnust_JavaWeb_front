@@ -1,17 +1,109 @@
 <script setup>
+import axios from 'axios';
 import pagination from './pagination.vue';
 </script>
 <script>
-  export default{
-    data(){
-      return{
-        major:"",
-        account : "",
-        student_name:"",
-        classname : "",
+function student(id, account, name, password, school, operation) {
+  this.id = id;
+  this.account = account;
+  this.name = name;
+  this.password = password;
+  this.school = school;
+  this.operation = operation;
+}
+
+export default {
+  data() {
+    return {
+      major: "",
+      account: "",
+      student_name: "",
+      classname: "",
+      st: 0,
+      change: true,
+      check_list: [],
+      all_student: [],
+    }
+  },
+  methods: {
+    find() {
+      axios.get("http://127.0.0.1:8080/student/find", {
+        params: {
+          major: this.major,
+          account: this.account,
+          name: this.student_name,
+          classname: this.classname,
+        }
+      })   
+        .then(res => {
+          console.log(res)
+          this.all_student = res.data.data;
+          while (this.all_student.length % 4 != 0) {
+            this.all_student.push(new student(0, "", "", "", "", ""));
+          }
+          for (let i = 0; i < 4; i++) {
+            this.all_student.push(new student(0, "", "", "", "", ""));
+          }
+          this.init_to_check_list(this.all_student.length)
+        })
+        .catch(err => {
+          console.error(err);
+        })
+    },
+    del() {
+      let cnt = 0;
+      for (let i = 0; i < this.check_list.length; i++) {
+        this.all_student[i - cnt] = this.all_student[i];
+        if (this.check_list[i] && this.all_student[i].id > 0) {
+          axios.delete("http://127.0.0.1:8080/student/delete", {
+            params: {
+              id: this.all_student[i].id,
+            }
+          }).then(res => {
+            console.log(res)
+          })
+            .catch(err => {
+              console.error(err);
+            });
+          this.check_list[i] = false;
+          cnt++;
+        }
       }
+
+
+    },
+    check(index) {
+      this.check_list[this.st + index] = !this.check_list[this.st + index];
+      console.log(this.check_list[this.st + index])
+      return this.check_list[this.st + index];
+    },
+    init_to_check_list(len) {
+      for (var i = 0; i < len; i++) {
+        this.check_list.push(false);
+      }
+    },
+    getPage(data) {
+      console.log(data)
+      if (4 * (data - 1) < this.all_student.length) {
+        this.st = 4 * (data - 1);
+      } else {
+        this.st = this.all_student.length - 4;
+      }
+      console.log(this.st)
+      console.log(this.all_student.length)
+    }
+  },
+  computed: {
+    student_list() {
+      return this.all_student.slice(this.st, this.st + 4);
+    },
+  },
+  created() {
+    for (var i = 0; i < 4; i++) {
+      this.student_list.push(new student(0, "", "", "", "", ""))
     }
   }
+}
 </script>
 <template>
   <div class="box">
@@ -55,7 +147,7 @@ import pagination from './pagination.vue';
       <div class="button-box">
         <div class="line">
           <div class="row">
-            <button id="find">查询</button>
+            <button id="find" v-on:click="find">查询</button>
           </div>
 
           <div class="row">
@@ -64,7 +156,7 @@ import pagination from './pagination.vue';
         </div>
         <div class="line">
           <div class="row">
-            <button id="delete">删除</button>
+            <button id="delete" @click="del">删除</button>
           </div>
 
           <div class="row"></div>
@@ -74,37 +166,49 @@ import pagination from './pagination.vue';
     <div class="table">
       <div class="inner-table">
         <div class="line" id="title">
-          <div class="row"> <span>账号</span>  </div>
-          <div class="row"> <span>姓名</span>  </div>
-          <div class="row"> <span>密码</span>  </div>
-          <div class="row"> <span>学校</span>  </div>
-          <div class="row"> <span>操作</span>  </div>
+          <div class="row">
+            <span>账号</span>
+          </div>
+          <div class="row">
+            <span>姓名</span>
+          </div>
+          <div class="row">
+            <span>密码</span>
+          </div>
+          <div class="row">
+            <span>学校</span>
+          </div>
+          <div class="row">
+            <span>操作</span>
+          </div>
         </div>
-        <div class="line">
-          <div class="row"></div>
-          <div class="row"></div>
-          <div class="row"></div>
-          <div class="row"></div>
-          <div class="row"></div>
-        </div>
-        <div class="line">
-          <div class="row"></div>
-          <div class="row"></div>
-          <div class="row"></div>
-          <div class="row"></div>
-          <div class="row"></div>
-        </div>
-        <div class="line">
-          <div class="row"></div>
-          <div class="row"></div>
-          <div class="row"></div>
-          <div class="row"></div>
-          <div class="row"></div>
+        <div
+          class="line"
+          v-for="(student, index) in student_list"
+          v-bind:key="index"
+          :class="{ checked: check_list[st + index] }"
+          @click="check(index)"
+        >
+          <div class="row">
+            <span>{{ student.account }}</span>
+          </div>
+          <div class="row">
+            <span>{{ student.name }}</span>
+          </div>
+          <div class="row">
+            <span>{{ student.password }}</span>
+          </div>
+          <div class="row">
+            <span>{{ student.school }}</span>
+          </div>
+          <div class="row">
+            <span>{{ student.operation }}</span>
+          </div>
         </div>
       </div>
     </div>
     <div class="footer">
-      <pagination id="page" />
+      <pagination id="page" @getPage="getPage" />
     </div>
   </div>
 </template>
@@ -120,7 +224,7 @@ a {
   height: 95%;
   width: 90%;
   background-color: #fff;
-  
+
   box-shadow: -0.1rem -0.1rem 0.1rem rgb(253, 240, 196);
 }
 .inner-head {
@@ -154,25 +258,28 @@ a {
   display: flex;
   flex-direction: column;
 }
-.inner-table .line{
-  border-bottom: #999 .1rem solid;
+.inner-table .line {
+  border-bottom: #999 0.1rem solid;
 }
-#title{
+.checked {
+  background-color: pink;
+}
+#title {
   background-color: #ccc;
   border: none;
 }
-.inner-table span{
+.inner-table span {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%,-50%);
+  transform: translate(-50%, -50%);
   font-size: 1.25rem;
-  color:#000;
+  color: #000;
 }
 .footer {
   position: relative;
   height: 22.7%;
-  width: 100%; 
+  width: 100%;
 }
 .input-box {
   position: absolute;
@@ -243,10 +350,10 @@ a {
 #reset {
   color: #000;
 }
-#page{
+#page {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform:translate(-50%,-50%);
+  transform: translate(-50%, -50%);
 }
 </style>
