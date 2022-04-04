@@ -1,5 +1,6 @@
 <script setup>
 import axios from 'axios';
+import qs from 'qs';
 import pagination from './pagination.vue';
 </script>
 <script>
@@ -34,7 +35,7 @@ export default {
           name: this.student_name,
           classname: this.classname,
         }
-      })   
+      })
         .then(res => {
           console.log(res)
           this.all_student = res.data.data;
@@ -52,25 +53,29 @@ export default {
     },
     del() {
       let cnt = 0;
+      let ids = [];
       for (let i = 0; i < this.check_list.length; i++) {
         this.all_student[i - cnt] = this.all_student[i];
         if (this.check_list[i] && this.all_student[i].id > 0) {
-          axios.delete("http://127.0.0.1:8080/student/delete", {
-            params: {
-              id: this.all_student[i].id,
-            }
-          }).then(res => {
-            console.log(res)
-          })
-            .catch(err => {
-              console.error(err);
-            });
           this.check_list[i] = false;
+          ids.push(this.all_student[i].id);
           cnt++;
         }
       }
-
-
+      console.log(ids)
+      axios.delete("http://127.0.0.1:8080/student/delete", {
+        params: {
+          ids: ids,
+        },
+        paramsSerializer: params => {
+          return qs.stringify(params, { indices: false })
+        }
+      }).then(res => {
+        console.log(res)
+      })
+        .catch(err => {
+          console.error(err);
+        });
     },
     check(index) {
       this.check_list[this.st + index] = !this.check_list[this.st + index];
